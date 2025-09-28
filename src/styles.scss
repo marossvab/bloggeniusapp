@@ -1,1 +1,10 @@
-/* You can add global styles to this file, and also import other style files */
+// @import "quill/dist/quill.bubble.css";
+
+html {
+  font-family: "Segoe UI", Roboto, sans-serif;
+}
+
+.content-container {
+  max-width: 1600px;
+  margin-inline: auto;
+}

@@ -1,0 +1,58 @@
+<div class="content-container">
+  <div class="row">
+    <div class="col">
+      <form [formGroup]="form">
+        <quill-editor
+          class="w-100"
+          formControlName="html"
+          placeholder="Začni písať ..."
+        >
+        </quill-editor>
+      </form>
+    </div>
+
+    <div class="col">
+      <button (click)="clearAll()">Clear All</button>
+      <div #myScrollContainer class="form-container mt-2">
+        @for (item of messages(); track $index) {
+
+        <div [ngClass]="{ 'pre-text': !isHTML(item.message) }">
+          <div
+            [ngClass]="{
+              'user-content': item.role == 'user',
+            }"
+          >
+            <div class="p-2" [innerHTML]="item.message"></div>
+          </div>
+        </div>
+        }
+      </div>
+
+      <form
+        class="mt-5 w-100"
+        [formGroup]="promptForm"
+        (ngSubmit)="!thinking() && onSubmit()"
+      >
+        <textarea
+          (keydown.control.enter)="!thinking() && onSubmit()"
+          class="w-100"
+          id="name"
+          type="text"
+          formControlName="prompt"
+        >
+        </textarea>
+
+        @if (thinking()) {
+        <div class="d-flex">
+          <span class="loader"></span>
+        </div>
+        } @else {
+        <div class="d-flex">
+          <button type="submit">Submit</button>
+          <div class="ms-2">(CTRL + ENTER) pre odoslanie</div>
+        </div>
+        }
+      </form>
+    </div>
+  </div>
+</div>
