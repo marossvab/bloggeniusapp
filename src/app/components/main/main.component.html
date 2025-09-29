@@ -1,18 +1,42 @@
 <div class="content-container">
   <div class="row">
-    <div class="col">
-      <form [formGroup]="form">
-        <quill-editor
-          class="w-100"
-          formControlName="html"
-          placeholder="Začni písať ..."
-        >
-        </quill-editor>
+    <div class="mt-5 col">
+      <form [formGroup]="form" class="form-container">
+        <ejs-richtexteditor formControlName="html" [enableHtmlSanitizer]="true">
+        </ejs-richtexteditor>
       </form>
     </div>
 
-    <div class="col">
-      <button (click)="clearAll()">Clear All</button>
+    <div class="col chat-panel">
+      <div class="mt-2 d-flex flex-wrap gap-1">
+        @for (item of service.allChatIds(); track $index) {
+        <div
+          class="m-1 chat-selector d-flex align-items-center justify-content-center"
+          [ngClass]="{ active: item == currentChat()?.chatId }"
+          (click)="changeChat($index)"
+        >
+          {{ $index + 1 }}
+        </div>
+        }
+      </div>
+
+      <div class="mt-2 d-flex gap-1">
+        <button
+          type="button"
+          class="btn btn-outline-primary"
+          (click)="newChat()"
+        >
+          <i class="bi bi-plus-lg"></i> New Chat
+        </button>
+        <button
+          type="button"
+          class="btn btn-outline-danger"
+          (click)="removeChat()"
+        >
+          Remove Chat
+        </button>
+        <!-- <button (click)="clearAll()">Clear All</button> -->
+      </div>
       <div #myScrollContainer class="form-container mt-2">
         @for (item of messages(); track $index) {
 
@@ -29,7 +53,7 @@
       </div>
 
       <form
-        class="mt-5 w-100"
+        class="mt-2 w-100"
         [formGroup]="promptForm"
         (ngSubmit)="!thinking() && onSubmit()"
       >

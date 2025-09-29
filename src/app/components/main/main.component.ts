@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+import { NgClass } from '@angular/common';
 import {
   Component,
   DestroyRef,
@@ -16,18 +16,30 @@ import {
   ReactiveFormsModule,
 } from '@angular/forms';
 import { DomSanitizer } from '@angular/platform-browser';
-import { QuillModule } from 'ngx-quill';
+import {
+  HtmlEditorService,
+  ImageService,
+  LinkService,
+  RichTextEditorAllModule,
+  ToolbarService,
+} from '@syncfusion/ej2-angular-richtexteditor';
 import { catchError, of, tap } from 'rxjs';
 import { Answer } from '../../interfaces/answer.interface';
 import { Chat } from '../../interfaces/chat.interface';
 import { Message } from '../../interfaces/message.interface';
 import { Question } from '../../interfaces/question.interface';
-import { ChatbotService } from '../../services/chatbot.service';
+import { ChatbotService } from '../../services/chat.service';
 
 @Component({
   selector: 'app-main',
-  imports: [CommonModule, QuillModule, ReactiveFormsModule],
-  providers: [ChatbotService],
+  imports: [NgClass, ReactiveFormsModule, RichTextEditorAllModule],
+  providers: [
+    ChatbotService,
+    ToolbarService,
+    LinkService,
+    ImageService,
+    HtmlEditorService,
+  ],
   templateUrl: './main.component.html',
   styleUrl: './main.component.scss',
 })
@@ -37,9 +49,10 @@ export class MainComponent implements OnInit {
 
   private fb = inject(FormBuilder);
   private sanitizer = inject(DomSanitizer);
-  private service = inject(ChatbotService);
+  public service = inject(ChatbotService);
   private dr = inject(DestroyRef);
 
+  currentChat = signal<Chat | null>(null);
   answer = signal<Answer | null>(null);
   messages = signal<Message[]>([]);
 
@@ -69,10 +82,55 @@ export class MainComponent implements OnInit {
     ],
   };
 
+  changeChat(idx: number) {
+    const chats = this.service.getChatIds();
+    const id = chats[idx];
+    const chat = this.service.getChatById(id);
+    if (chat) {
+      this.setCurrentChat(chat);
+      setTimeout(() => {
+        this.scrollToElement();
+      }, 100);
+    }
+  }
+
   clearAll() {
-    localStorage.removeItem(this.service.chatContentStorageKey);
-    localStorage.removeItem(this.service.chatMessagesStorageKey);
+    this.service.deleteChats();
     window.location.reload();
+  }
+
+  setCurrentChat(chat: Chat) {
+    this.currentChat.set(chat);
+    this.messages.set(chat.messages);
+    this.form.patchValue({ html: chat.content }, { emitEvent: false });
+    this.service.setCurrentChat(chat.chatId);
+  }
+
+  newChat(): void {
+    const chat = this.service.createChat();
+    if (chat) {
+      this.setCurrentChat(chat);
+    }
+  }
+
+  removeChat(): void {
+    const chat = this.currentChat();
+    if (chat) {
+      this.service.deleteChat(chat.chatId);
+      const chats = this.service.getChatIds();
+
+      if (chats.length == 0) {
+        this.newChat();
+      } else {
+        const first = chats.find((_, index) => !index);
+
+        const newChat = this.service.getChatById(chats[0]);
+
+        if (newChat) {
+          this.setCurrentChat(newChat);
+        }
+      }
+    }
   }
 
   scrollToElement(): void {
@@ -87,30 +145,44 @@ export class MainComponent implements OnInit {
     setTimeout(() => {
       this.scrollToElement();
       this.thinking.set(false);
-    }, 500);
+    }, 100);
 
     this.form
       .get('html')
       ?.valueChanges.pipe(
         takeUntilDestroyed(this.dr),
-        tap((data) =>
-          localStorage.setItem(this.service.chatContentStorageKey, data)
-        )
+        tap((data) => {
+          // localStorage.setItem(this.service.chatContentStorageKey, data)
+          const chat = this.service.getCurrentChat();
+          if (chat) {
+            chat.content = data;
+            this.service.updateChat(chat);
+          }
+        })
       )
       .subscribe();
 
-    const chat = this.service.getChatById('1');
-
+    const chat = this.service.getCurrentChat();
     if (chat) {
+      this.currentChat.set(chat);
       this.messages.set(chat.messages);
+      this.form.patchValue({ html: chat.content }, { emitEvent: false });
+    } else {
+      this.newChat();
     }
 
-    const chatContent = localStorage.getItem(
-      this.service.chatContentStorageKey
-    );
-    if (chatContent) {
-      this.form.patchValue({ html: chatContent }, { emitEvent: false });
-    }
+    // const chat = this.service.getChatById('1');
+
+    // if (chat) {
+    //   this.messages.set(chat.messages);
+    // }
+
+    // const chatContent = localStorage.getItem(
+    //   this.service.chatContentStorageKey
+    // );
+    // if (chatContent) {
+    //   this.form.patchValue({ html: chatContent }, { emitEvent: false });
+    // }
   }
 
   isHTML(text: string): boolean {
@@ -161,19 +233,27 @@ export class MainComponent implements OnInit {
           return [...values, lastMessage];
         });
 
-        const chat: Chat = {
-          chatId: '1',
-          content: this.form.value.html,
-          messages: this.messages(),
-        };
-        await this.service.upsertChat(chat);
-
-        const ret = await this.service.getChatById('1');
+        // const chat: Chat = {
+        //   chatId: '1',
+        //   content: this.form.value.html,
+        //   messages: this.messages(),
+        // };
+        // await this.service.upsertChat(chat);
+        // const ret = await this.service.getChatById('1');
+        const chat = this.service.getCurrentChat();
+        if (chat) {
+          chat.content = this.form.value.html;
+          chat.messages = this.messages();
+          this.service.updateChat(chat);
+          // this.currentChat.set(chat);
+          // this.messages.set(chat.messages);
+          // this.form.patchValue({ html: chat.content }, { emitEvent: false });
+        }
 
         setTimeout(() => {
           this.scrollToElement();
           this.thinking.set(false);
-        }, 500);
+        }, 100);
 
         // this.form.patchValue({ html: data.answer }, { emitEvent: false });
       });
