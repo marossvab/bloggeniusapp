@@ -245,7 +245,7 @@ export class MainComponent implements OnInit {
           chat.content = this.form.value.html;
           chat.messages = this.messages();
           this.service.updateChat(chat);
-          // this.currentChat.set(chat);
+          // this.currentChat.set(chat );
           // this.messages.set(chat.messages);
           // this.form.patchValue({ html: chat.content }, { emitEvent: false });
         }
